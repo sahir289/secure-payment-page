@@ -66,7 +66,7 @@ export default function HomePage() {
   if (!urlAmount) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-1">
-        <Header />
+
         <main className="flex-1 flex flex-col items-center justify-center p-2">
           <Card className="w-full max-w-md">
             <CardHeader className="text-center">

@@ -1,7 +1,7 @@
 "use client";
 
 import { PaymentActions } from "@/components/payment-actions";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import BankTransferDetails from "@/components/payment-methods/bank-transfer-details";
 import PhonePeDetails from "@/components/payment-methods/phonepe-details";
 import UpiDetails from "@/components/payment-methods/upi-details";
@@ -12,6 +12,16 @@ import { Suspense, useEffect, useState } from "react";
 export default function PaymentPage() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams()
+  const [currentTab, setCurrentTab] = useState("tab");
+
+  useEffect(() => {
+    // This code runs only on the client side after the component mounts
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      setCurrentTab(params.get("tab"));
+    }
+  }, []);
 
   const handleTabChange = (value) => {
     router.push(`${pathname}?tab=${value}`);
