@@ -21,6 +21,9 @@ export default function RootLayout({ children }) {
           <main className="flex-1 p-6 max-w-3xl mx-auto w-full">
             {children}
           </main>
+          <footer className="w-full text-gray-600 py-4 text-center text-sm border-t border-gray-200">
+          &copy; {new Date().getFullYear()} SecurePay. All rights reserved.
+        </footer>
         </div>
       </body>
     </html>
