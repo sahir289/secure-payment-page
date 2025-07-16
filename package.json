@@ -8,7 +8,6 @@
     "start": "next start",
     "lint": "next lint"
   },
-  "type": "module",
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-select": "^2.2.5",
