@@ -64,6 +64,7 @@ export function PaymentActions({ merchantOrderId, code, amount, remainingTime, r
       setSubmissionStatus("submitting");
 
       let response;
+      let transactionData;
 
       if (utr) {
         response = await processTransaction(merchantOrderId, {
@@ -72,7 +73,7 @@ export function PaymentActions({ merchantOrderId, code, amount, remainingTime, r
           amount,
         });
 
-        const transactionData = response?.data;
+        transactionData = response?.data;
         setTransactionData(transactionData);
 
         if (transactionData?.error) {
@@ -95,8 +96,13 @@ export function PaymentActions({ merchantOrderId, code, amount, remainingTime, r
         formData.append("file", file);
         response = await imageSubmit(merchantOrderId, formData);
 
-        const transactionData = response?.data;
-        setTransactionData(transactionData);
+        transactionData = response?.data;
+        const { status } = transactionData;
+        setTransactionData({ 
+            merchantOrderId: transactionData.merchant_order_id, 
+            req_amount: amount,
+            status 
+          });
 
         if (transactionData?.error) {
           setSubmissionStatus("failure");
@@ -104,6 +110,12 @@ export function PaymentActions({ merchantOrderId, code, amount, remainingTime, r
         } else if (transactionData) {
           setSubmissionStatus(transactionData.status);
           setDialogMessage("Payment processing...");
+          // Handle redirect for image submission
+          if (transactionData.return_url) {
+            setTimeout(() => {
+              window.location.href = transactionData.return_url;
+            }, 5000);
+          }
         } else {
           setSubmissionStatus("failure");
           setDialogMessage("Failed to process transaction");
@@ -113,6 +125,10 @@ export function PaymentActions({ merchantOrderId, code, amount, remainingTime, r
       setIsDialogOpen(true);
 
       if (response?.data?.data?.status === "PENDING") {
+        setUtr("");
+        setFile(null);
+      }
+      if (transactionData?.status === "IMG_PENDING") {
         setUtr("");
         setFile(null);
       }
