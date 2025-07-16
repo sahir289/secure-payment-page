@@ -33,6 +33,8 @@ export function usePayment() {
   const apiCalledRef = useRef(false);
   const router = useRouter();
 
+  const [isValidating, setIsValidating] = useState(false);
+
   const validateAmount = (amount, minAmount, maxAmount) => {
     const numericAmount = Number(amount);
     const numericMinAmount = Number(minAmount);
@@ -76,6 +78,7 @@ export function usePayment() {
 
     try {
       validateCalledRef.current = true;
+      setIsValidating(true); // Start validation loader
       setMerchantOrderId(order);
       const response = await validateToken(order, isReload);
 
@@ -99,9 +102,13 @@ export function usePayment() {
           setSelectMethod(true);
         }
       }
+      return response.data;
     } catch (error) {
       console.error('Validation error:', error);
       setShowExpiredModal(true);
+      throw error;
+    } finally {
+      setIsValidating(false); // Stop validation loader
     }
   };
 
@@ -171,6 +178,7 @@ export function usePayment() {
       expireTime,
       startTime,
       bankDetails,
+      isValidating,
     },
     actions: {
       handleValidation,
