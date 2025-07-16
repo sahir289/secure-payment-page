@@ -7,7 +7,7 @@ export default defineConfig({
     port: 5174,
     proxy: {
       '/v1': {
-        target: 'http://localhost:8090',
+        target: process.env.NEXT_PUBLIC_API_BASE_URL,
         changeOrigin: true,
         secure: false
       }
