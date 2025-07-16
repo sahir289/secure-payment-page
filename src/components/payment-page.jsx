@@ -50,7 +50,7 @@ export default function PaymentPage({
         )}
       </div>
 
-      <PaymentActions amount={amount} />
+      <PaymentActions amount={amount} merchantOrderId={bank.merchantOrderId} />
     </div>
   );
 }

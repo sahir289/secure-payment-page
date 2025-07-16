@@ -2,13 +2,14 @@ import { API_CONFIG } from '@/config/api.config';
 
 export async function validateToken(order, isReload) {
   try {
-    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.VALIDATE_TOKEN}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ order, isReload }),
-    });
+    if (!order) {
+      throw new Error('Order ID is required for validation.');
+    }
+
+    const params = new URLSearchParams();
+    params.append('isReload', isReload);
+
+    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.VALIDATE_TOKEN}/${order}?${params.toString()}`);
     return await response.json();
   } catch (error) {
     console.error('Error validating token:', error);
@@ -48,6 +49,52 @@ export async function generatePayIn(userId, code, ot, key, hashCode, amount = nu
     return await response.json();
   } catch (error) {
     console.error('Error generating pay in:', error);
+    throw error;
+  }
+}
+
+export async function assignBankToPayInUrl(orderId, data) {
+
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.ASSIGN_BANK}/${orderId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Error assigning bank:', error);
+    throw error;
+  }
+}
+
+export async function processTransaction(merchantOrderId, data) {
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.PROCESS_TRANSACTION}/${merchantOrderId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Error processing transaction:', error);
+    throw error;
+  }
+}
+
+export async function imageSubmit(merchantOrderId, formData) {
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.IMAGE_SUBMIT}/${merchantOrderId}`, {
+      method: 'POST',
+      body: formData // FormData automatically sets the correct Content-Type
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Error submitting image:', error);
     throw error;
   }
 }

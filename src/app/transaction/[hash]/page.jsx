@@ -26,6 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { assignBankToPayInUrl } from '@/services/api';
+import { Loader2 } from "lucide-react";
 
 export default function TransactionPage({ params }) {
   const resolvedParams = use(params);
@@ -45,11 +47,26 @@ export default function TransactionPage({ params }) {
   const [paymentType, setPaymentType] = useState("");
   const [ProceedToPay, setProceedToPay] = useState(false);
   const [error, setError] = useState("");
+  const [bankDetails, setBankDetails] = useState(null);
+  const [redirectUrl, setRedirectUrl] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isAssigningBank, setIsAssigningBank] = useState(false);
 
   const {
     state,
     actions: { handlePaymentInitialization, handleValidation },
   } = usePayment();
+
+  // Helper function to convert UI payment type to API payment type
+  const getApiPaymentType = (uiType) => {
+    switch (uiType) {
+      case 'upi': return 'upi';
+      case 'phonepe': return 'phone_pe';
+      case 'bank-transfer': return 'bank_transfer';
+      default: return '';
+    }
+  };
 
   const handleAmountSubmit = async (e) => {
     e.preventDefault();
@@ -57,48 +74,63 @@ export default function TransactionPage({ params }) {
       setError("Please select a payment type.");
       return;
     }
+    setCurrentTab(paymentType); // Set the tab to match payment type
 
-    setProceedToPay(true);
-    setCurrentTab(paymentType);
+    try {
+      setIsAssigningBank(true); // Start loading
+      const bankResponse = await assignBankToPayInUrl(orderParam || state.merchantOrderId, {
+        amount: inputAmount,
+        type: getApiPaymentType(paymentType)
+      });
 
-    const result = await handlePaymentInitialization({
-      userId,
-      code,
-      ot,
-      key,
-      amount: inputAmount,
-      hashCode,
-    });
-
-    if (result?.orderId) {
-      await handleValidation(result.orderId, false);
+      if (bankResponse?.data) {
+        setBankDetails(bankResponse.data);
+        // Store returnUrl but don't redirect yet
+        setRedirectUrl(bankResponse.data.return);
+        setProceedToPay(true);
+        setCurrentTab(paymentType);
+      } else {
+        setError(bankResponse?.error?.message || 'Failed to assign bank');
+      }
+    } catch (error) {
+      console.error('Payment flow error:', error);
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setIsAssigningBank(false); // Stop loading
     }
   };
 
   useEffect(() => {
     setIsClient(true);
+    let isApiCalled = false;
 
     const initializePayment = async () => {
+      setIsInitializing(true);
       try {
-        if (orderParam) {
-          await handleValidation(orderParam, true);
-        } else if (userId && code && ot && key && hashCode) {
-          console.log("Initializing payment...");
-          const result = await handlePaymentInitialization({
-            userId,
-            code,
-            ot,
-            key,
-            hashCode,
-          });
-          console.log("Payment initialization result:", result);
+        if (!isApiCalled) {
+          if (orderParam) {
+            await handleValidation(orderParam, true);
+            isApiCalled = true;
+          } else if (userId && code && ot && key && hashCode) {
+            const result = await handlePaymentInitialization({
+              userId,
+              code,
+              ot,
+              key,
+              hashCode
+            });
 
-          if (result?.orderId) {
-            await handleValidation(result.orderId, false);
+            if (result?.orderId) {
+              await handleValidation(result.orderId, false);
+              isApiCalled = true;
+            }
           }
         }
       } catch (err) {
-        console.error("Error initializing payment:", err);
+        console.error('Error in payment flow:', err);
+        setError('Failed to initialize payment');
+      } finally {
+        setIsInitializing(false);
       }
     };
 
@@ -111,8 +143,13 @@ export default function TransactionPage({ params }) {
     setCurrentTab(value);
   };
 
-  if (!isClient) {
-    return <div>Loading...</div>;
+  if (!isClient || isInitializing) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-green-500 mb-4" />
+        <p className="text-gray-600">Initializing payment...</p>
+      </div>
+    );
   }
 
   if (inputAmount && ProceedToPay) {
@@ -122,58 +159,33 @@ export default function TransactionPage({ params }) {
           <PaymentTimer initialMinutes={10} />
         </div>
 
-        <Tabs
-          value={currentTab || undefined}
-          onValueChange={(val) => {
-            if (!currentTab) handleTabChange(val);
-          }}
+        <Tabs 
+          value={paymentType} // Use paymentType instead of currentTab
+          defaultValue={paymentType} // Set default value to selected payment type
           className="w-full max-w-md"
         >
           <TabsList className="grid w-full grid-cols-3">
-            {!currentTab ? (
-              <>
-                <TabsTrigger value="upi">UPI</TabsTrigger>
-                <TabsTrigger value="phonepe">PhonePe</TabsTrigger>
-                <TabsTrigger value="bank-transfer">Bank Transfer</TabsTrigger>
-              </>
-            ) : (
-              <TabsTrigger
-                value={currentTab}
-                className="col-span-3 pointer-events-none justify-center"
-              >
-                {currentTab === "upi" && "UPI"}
-                {currentTab === "phonepe" && "PhonePe"}
-                {currentTab === "bank-transfer" && "Bank Transfer"}
-              </TabsTrigger>
-            )}
+            <TabsTrigger 
+              value={paymentType} 
+              className="col-span-3 pointer-events-none justify-center"
+            >
+              {paymentType === "upi" && "UPI"}
+              {paymentType === "phonepe" && "PhonePe"}
+              {paymentType === "bank-transfer" && "Bank Transfer"}
+            </TabsTrigger>
           </TabsList>
         </Tabs>
 
-        <div
-          className={`mt-2 border rounded-lg p-6 bg-white shadow-md w-full max-w-md transition-all duration-300 ${
-            currentTab
-              ? "min-h-[200px] flex flex-col items-center justify-center"
-              : ""
-          }`}
-        >
+        <div className="mt-2 border rounded-lg p-6 bg-white shadow-md w-full max-w-md">
           <Suspense fallback={<p>Loading payment details...</p>}>
-            {currentTab === "upi" && <UpiDetails />}
-            {currentTab === "phonepe" && <PhonePeDetails />}
-            {currentTab === "bank-transfer" && <BankTransferDetails />}
-            {!currentTab && (
-              <p className="text-sm text-center text-muted-foreground">
-                Select a payment method above to view details.
-              </p>
-            )}
+            {paymentType === "upi" && <UpiDetails bankData={bankDetails} />}
+            {paymentType === "phonepe" && <PhonePeDetails bankData={bankDetails} />}
+            {paymentType === "bank-transfer" && <BankTransferDetails bankData={bankDetails} />}
           </Suspense>
         </div>
 
-        <PaymentActions />
-        {/* <footer className="w-full text-gray-600 py-4 text-center text-sm border-t border-gray-200">
-          &copy; {new Date().getFullYear()} SecurePay. All rights reserved.
-        </footer> */}
+        <PaymentActions redirectUrl={redirectUrl} amount={inputAmount} merchantOrderId={orderParam || state.merchantOrderId}/>
       </div>
-      //   <PaymentPage />
     );
   }
 
@@ -233,13 +245,13 @@ export default function TransactionPage({ params }) {
                       className="hover:bg-green-50 focus:bg-green-50 focus:text-green-800"
                       value="upi"
                     >
-                      Upi
+                      UPI
                     </SelectItem>
                     <SelectItem
                       className="hover:bg-green-50 focus:bg-green-50 focus:text-green-800"
                       value="phonepe"
                     >
-                      Phonepe
+                      PhonePe
                     </SelectItem>
                     <SelectItem
                       className="hover:bg-green-50 focus:bg-green-50 focus:text-green-800"
@@ -254,8 +266,12 @@ export default function TransactionPage({ params }) {
               <Button
                 type="submit"
                 className="w-full h-12 text-lg bg-green-500 hover:bg-green-600"
+                disabled={isAssigningBank}
               >
-                Proceed to Pay
+                {isAssigningBank ? (
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                ) : null}
+                {isAssigningBank ? "Processing..." : "Proceed to Pay"}
               </Button>
             </form>
           </CardContent>

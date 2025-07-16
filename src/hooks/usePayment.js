@@ -21,6 +21,8 @@ export function usePayment() {
   const [maxAmount, setMaxAmount] = useState(0);
   const [amount, setAmount] = useState('');
   const [selectMethod, setSelectMethod] = useState(false);
+  // Bank details state
+  const [bankDetails, setBankDetails] = useState(null);
 
   // Timer states
   const [remainingTime, setRemainingTime] = useState(10 * 60); // 10 minutes
@@ -67,6 +69,10 @@ export function usePayment() {
 
   const handleValidation = async (order, isReload) => {
     if (!order) return;
+    // Add validation check
+    if (validateCalledRef.current) {
+      return;
+    }
 
     try {
       validateCalledRef.current = true;
@@ -123,7 +129,7 @@ export function usePayment() {
       );
 
       if (response.error) {
-        toast.error(response.error.message);
+        // toast.error(response.error.message);
         setTimeout(() => setShowExpiredModal(true), 15000);
         return null;
       } 
@@ -164,6 +170,7 @@ export function usePayment() {
       remainingTime,
       expireTime,
       startTime,
+      bankDetails,
     },
     actions: {
       handleValidation,
@@ -172,6 +179,7 @@ export function usePayment() {
       setAmount,
       setSelectMethod,
       validateAmount,
+      setBankDetails,
     },
   };
 }
