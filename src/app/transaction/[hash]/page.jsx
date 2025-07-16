@@ -90,6 +90,15 @@ export default function TransactionPage({ params }) {
     return true;
   };
 
+  const handleAmountChange = (e) => {
+    const value = e.target.value;
+    // Remove decimal points, negative signs, and leading zeros
+    const sanitizedValue = value.replace(/[.-]/g, '').replace(/^0+/, '');
+    // Convert to positive integer
+    const positiveInteger = Math.abs(parseInt(sanitizedValue) || '');
+    setInputAmount(positiveInteger || ''); // Return empty string instead of 0
+  };
+
   const handleAmountSubmit = async (e) => {
     e.preventDefault();
     setError(""); // Clear previous errors
@@ -260,10 +269,17 @@ export default function TransactionPage({ params }) {
                     <Input
                       id="amount-input"
                       type="number"
+                      min="1"
                       step="1"
-                      placeholder="0.00"
+                      onKeyDown={(e) => {
+                        // Prevent decimal point, negative sign, and 'e'
+                        if (e.key === '.' || e.key === '-' || e.key.toLowerCase() === 'e') {
+                          e.preventDefault();
+                        }
+                      }}
+                      placeholder="Enter amount"
                       value={inputAmount}
-                      onChange={(e) => setInputAmount(e.target.value)}
+                      onChange={handleAmountChange}
                       className="h-12 text-3xl font-semibold text-center pl-12 pr-4 border-b-2 focus:outline-none transition-colors duration-200 rounded-lg w-full"
                       required
                     />

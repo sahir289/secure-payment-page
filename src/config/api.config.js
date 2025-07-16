@@ -5,6 +5,6 @@ export const API_CONFIG = {
     VALIDATE_TOKEN: '/payIn/validate-payIn-url',
     ASSIGN_BANK: '/payIn/assign-bank',
     PROCESS_TRANSACTION: '/payIn/process',
-    IMAGE_SUBMIT: '/payIn/image-submit'
+    IMAGE_SUBMIT: '/payIn/process-by-image'
   }
 };
