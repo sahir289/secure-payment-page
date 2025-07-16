@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { assignBankToPayInUrl } from '@/services/api';
 import { Loader2 } from "lucide-react";
+import ErrorPopup from "@/components/error-popup"; // Updated import path
 
 export default function TransactionPage({ params }) {
   const resolvedParams = use(params);
@@ -52,9 +53,10 @@ export default function TransactionPage({ params }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isAssigningBank, setIsAssigningBank] = useState(false);
+  const [globalError, setGlobalError] = useState(null);
 
   const {
-    state,
+    state: { isValidating },
     actions: { handlePaymentInitialization, handleValidation },
   } = usePayment();
 
@@ -68,16 +70,47 @@ export default function TransactionPage({ params }) {
     }
   };
 
+  const handleApiError = (error) => {
+    setGlobalError(error.message || "Something went wrong. Please try again.");
+    setIsAssigningBank(false);
+    setError(error.message);  // Also set form error
+  };
+
+  const handleValidationResponse = (result) => {
+    if (result?.error) {
+      handleApiError(new Error(result.error));
+      // If there's a redirect URL in the error response, redirect to it
+      if (result.result?.redirect_url) {
+        setTimeout(() => {
+          window.location.href = result.result.redirect_url;
+        }, 5000);      
+      }
+      return false;
+    }
+    return true;
+  };
+
+  const handleAmountChange = (e) => {
+    const value = e.target.value;
+    // Remove decimal points, negative signs, and leading zeros
+    const sanitizedValue = value.replace(/[.-]/g, '').replace(/^0+/, '');
+    // Convert to positive integer
+    const positiveInteger = Math.abs(parseInt(sanitizedValue) || '');
+    setInputAmount(positiveInteger || ''); // Return empty string instead of 0
+  };
+
   const handleAmountSubmit = async (e) => {
     e.preventDefault();
+    setError(""); // Clear previous errors
+    setGlobalError(null); // Clear previous global errors
+    
     if (!paymentType) {
       setError("Please select a payment type.");
       return;
     }
-    setCurrentTab(paymentType); // Set the tab to match payment type
 
     try {
-      setIsAssigningBank(true); // Start loading
+      setIsAssigningBank(true);
       const bankResponse = await assignBankToPayInUrl(orderParam || state.merchantOrderId, {
         amount: inputAmount,
         type: getApiPaymentType(paymentType)
@@ -85,18 +118,19 @@ export default function TransactionPage({ params }) {
 
       if (bankResponse?.data) {
         setBankDetails(bankResponse.data);
-        // Store returnUrl but don't redirect yet
         setRedirectUrl(bankResponse.data.return);
         setProceedToPay(true);
         setCurrentTab(paymentType);
-      } else {
-        setError(bankResponse?.error?.message || 'Failed to assign bank');
+      }
+
+      if (bankResponse?.error.message) {
+        handleApiError(new Error(bankResponse.error.message || "Failed to assign bank details."));  
+        return;
       }
     } catch (error) {
-      console.error('Payment flow error:', error);
-      setError('Something went wrong. Please try again.');
+      handleApiError(error);
     } finally {
-      setIsAssigningBank(false); // Stop loading
+      setIsAssigningBank(false);
     }
   };
 
@@ -109,26 +143,37 @@ export default function TransactionPage({ params }) {
       try {
         if (!isApiCalled) {
           if (orderParam) {
-            await handleValidation(orderParam, true);
+            const result = await handleValidation(orderParam, true);
+            
+            // Handle validation response
+            if (!handleValidationResponse(result)) {
+              return;
+            }
             isApiCalled = true;
           } else if (userId && code && ot && key && hashCode) {
-            const result = await handlePaymentInitialization({
+            const initResult = await handlePaymentInitialization({
               userId,
               code,
               ot,
               key,
               hashCode
             });
+            if (!initResult) {
+              handleApiError(new Error("Failed to initialize payment. Please try again."));
+            }
 
-            if (result?.orderId) {
-              await handleValidation(result.orderId, false);
+            if (initResult?.orderId) {
+              const validationResult = await handleValidation(initResult.orderId, false);
+              // Handle validation response
+              if (!handleValidationResponse(validationResult)) {
+                return;
+              }
               isApiCalled = true;
             }
           }
         }
       } catch (err) {
-        console.error('Error in payment flow:', err);
-        setError('Failed to initialize payment');
+        handleApiError(err);
       } finally {
         setIsInitializing(false);
       }
@@ -143,140 +188,165 @@ export default function TransactionPage({ params }) {
     setCurrentTab(value);
   };
 
-  if (!isClient || isInitializing) {
+  // Update the loading condition to include validation state
+  if (!isClient || isInitializing || isValidating) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-green-500 mb-4" />
-        <p className="text-gray-600">Initializing payment...</p>
+        <p className="text-gray-600">
+          {isValidating ? "Validating payment details..." : "Initializing payment..."}
+        </p>
       </div>
     );
   }
 
   if (inputAmount && ProceedToPay) {
     return (
-      <div className="flex flex-col items-center w-full">
-        <div className="mb-2 w-full max-w-md">
-          <PaymentTimer initialMinutes={10} />
+      <>
+        <div className="flex flex-col items-center w-full">
+          <div className="mb-2 w-full max-w-md">
+            <PaymentTimer initialMinutes={10} />
+          </div>
+
+          <Tabs 
+            value={paymentType} // Use paymentType instead of currentTab
+            defaultValue={paymentType} // Set default value to selected payment type
+            className="w-full max-w-md"
+          >
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger 
+                value={paymentType} 
+                className="col-span-3 pointer-events-none justify-center"
+              >
+                {paymentType === "upi" && "UPI"}
+                {paymentType === "phonepe" && "PhonePe"}
+                {paymentType === "bank-transfer" && "Bank Transfer"}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <div className="mt-2 border rounded-lg p-6 bg-white shadow-md w-full max-w-md">
+            <Suspense fallback={<p>Loading payment details...</p>}>
+              {paymentType === "upi" && <UpiDetails bankData={bankDetails} />}
+              {paymentType === "phonepe" && <PhonePeDetails bankData={bankDetails} />}
+              {paymentType === "bank-transfer" && <BankTransferDetails bankData={bankDetails} />}
+            </Suspense>
+          </div>
+
+          <PaymentActions redirectUrl={redirectUrl} amount={inputAmount} merchantOrderId={orderParam || state.merchantOrderId}/>
         </div>
-
-        <Tabs 
-          value={paymentType} // Use paymentType instead of currentTab
-          defaultValue={paymentType} // Set default value to selected payment type
-          className="w-full max-w-md"
-        >
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger 
-              value={paymentType} 
-              className="col-span-3 pointer-events-none justify-center"
-            >
-              {paymentType === "upi" && "UPI"}
-              {paymentType === "phonepe" && "PhonePe"}
-              {paymentType === "bank-transfer" && "Bank Transfer"}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        <div className="mt-2 border rounded-lg p-6 bg-white shadow-md w-full max-w-md">
-          <Suspense fallback={<p>Loading payment details...</p>}>
-            {paymentType === "upi" && <UpiDetails bankData={bankDetails} />}
-            {paymentType === "phonepe" && <PhonePeDetails bankData={bankDetails} />}
-            {paymentType === "bank-transfer" && <BankTransferDetails bankData={bankDetails} />}
-          </Suspense>
-        </div>
-
-        <PaymentActions redirectUrl={redirectUrl} amount={inputAmount} merchantOrderId={orderParam || state.merchantOrderId}/>
-      </div>
+        <ErrorPopup 
+          isOpen={!!globalError}
+          message={globalError}
+        />
+      </>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-1">
-      <main className="flex-1 flex flex-col items-center justify-center p-2">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-bold text-gray-800">
-              Enter Payment Amount
-            </CardTitle>
-            <CardDescription className="text-gray-600">
-              Please specify the amount you wish to pay.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleAmountSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="amount-input" className="sr-only">
-                  Amount
-                </label>
-                <div className="relative flex items-center">
-                  <span className="absolute left-4 text-gray-500 text-3xl font-semibold">
-                    ₹
-                  </span>
-                  <Input
-                    id="amount-input"
-                    type="number"
-                    step="1"
-                    placeholder="0.00"
-                    value={inputAmount}
-                    onChange={(e) => setInputAmount(e.target.value)}
-                    className="h-12 text-3xl font-semibold text-center pl-12 pr-4 border-b-2 focus:outline-none transition-colors duration-200 rounded-lg w-full"
-                    required
-                  />
+    <>
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-1">
+        <main className="flex-1 flex flex-col items-center justify-center p-2">
+          <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+              <CardTitle className="text-3xl font-bold text-gray-800">
+                Enter Payment Amount
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                Please specify the amount you wish to pay.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleAmountSubmit} className="space-y-6">
+                <div>
+                  <label htmlFor="amount-input" className="sr-only">
+                    Amount
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-4 text-gray-500 text-3xl font-semibold">
+                      ₹
+                    </span>
+                    <Input
+                      id="amount-input"
+                      type="number"
+                      min="1"
+                      step="1"
+                      onKeyDown={(e) => {
+                        // Prevent decimal point, negative sign, and 'e'
+                        if (e.key === '.' || e.key === '-' || e.key.toLowerCase() === 'e') {
+                          e.preventDefault();
+                        }
+                      }}
+                      placeholder="Enter amount"
+                      value={inputAmount}
+                      onChange={handleAmountChange}
+                      className="h-12 text-3xl font-semibold text-center pl-12 pr-4 border-b-2 focus:outline-none transition-colors duration-200 rounded-lg w-full"
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label
-                  htmlFor="payment-type-select"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Select Payment Method
-                </label>
-                <Select value={paymentType} onValueChange={setPaymentType}>
-                  <SelectTrigger
-                    id="payment-type-select"
-                    className={`w-full h-12 text-base ${
-                      error ? "border-red-500" : ""
-                    }`}
+                <div>
+                  <label
+                    htmlFor="payment-type-select"
+                    className="block text-sm font-medium text-gray-700 mb-2"
                   >
-                    <SelectValue placeholder="Choose a type" />
-                  </SelectTrigger>
-                  <SelectContent className="">
-                    <SelectItem
-                      className="hover:bg-green-50 focus:bg-green-50 focus:text-green-800"
-                      value="upi"
+                    Select Payment Method
+                  </label>
+                  <Select value={paymentType} onValueChange={setPaymentType}>
+                    <SelectTrigger
+                      id="payment-type-select"
+                      className={`w-full h-12 text-base ${
+                        error ? "border-red-500" : ""
+                      }`}
                     >
-                      UPI
-                    </SelectItem>
-                    <SelectItem
-                      className="hover:bg-green-50 focus:bg-green-50 focus:text-green-800"
-                      value="phonepe"
-                    >
-                      PhonePe
-                    </SelectItem>
-                    <SelectItem
-                      className="hover:bg-green-50 focus:bg-green-50 focus:text-green-800"
-                      value="bank-transfer"
-                    >
-                      Bank Transfer
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                      <SelectValue placeholder="Choose a type" />
+                    </SelectTrigger>
+                    <SelectContent className="">
+                      <SelectItem
+                        className="hover:bg-green-50 focus:bg-green-50 focus:text-green-800"
+                        value="upi"
+                      >
+                        UPI
+                      </SelectItem>
+                      <SelectItem
+                        className="hover:bg-green-50 focus:bg-green-50 focus:text-green-800"
+                        value="phonepe"
+                      >
+                        PhonePe
+                      </SelectItem>
+                      <SelectItem
+                        className="hover:bg-green-50 focus:bg-green-50 focus:text-green-800"
+                        value="bank-transfer"
+                      >
+                        Bank Transfer
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <Button
-                type="submit"
-                className="w-full h-12 text-lg bg-green-500 hover:bg-green-600"
-                disabled={isAssigningBank}
-              >
-                {isAssigningBank ? (
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                ) : null}
-                {isAssigningBank ? "Processing..." : "Proceed to Pay"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+                <Button
+                  type="submit"
+                  className="w-full h-12 text-lg bg-green-500 hover:bg-green-600"
+                  disabled={isAssigningBank}
+                >
+                  {isAssigningBank ? (
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  ) : null}
+                  {isAssigningBank ? "Processing..." : "Proceed to Pay"}
+                </Button>
+              </form>
+              {error && (
+                <p className="text-red-500 text-sm mt-2 text-center">{error}</p>
+              )}
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+      <ErrorPopup 
+        isOpen={!!globalError}
+        message={globalError}
+      />
+    </>
   );
 }
