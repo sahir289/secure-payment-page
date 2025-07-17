@@ -3,8 +3,8 @@
 // import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // import { useRouter, useSearchParams, usePathname } from "next/navigation";
 // import { Suspense, useEffect, useState } from "react";
-// import { PaymentActions } from "@/components/payment-actions";
-// import { PaymentTimer } from "@/components/payment-timer";
+// // import PaymentActions from "@/components/payment-actions";
+// import PaymentTimer from "@/components/payment-timer";
 // import {
 //   Card,
 //   CardContent,
@@ -30,100 +30,100 @@
 
 //   const [inputAmount, setInputAmount] = useState("");
 
-//   const {
-//     state: {
-//       merchantOrderId,
-//       isValidated,
-//       showExpiredModal,
-//       accessDenied,
-//       redirectUrl,
-//       upi,
-//       phonePay,
-//       bank,
-//       code,
-//       minAmount,
-//       maxAmount,
-//       amount,
-//       selectMethod,
-//       remainingTime,
-//     },
-//     actions: {
-//       handleValidation,
-//       handlePaymentInitialization,
-//       setShowExpiredModal,
-//       setAmount,
-//       setSelectMethod,
-//       validateAmount,
-//     },
-//   } = usePayment();
+//   // const {
+//   //   state: {
+//   //     merchantOrderId,
+//   //     isValidated,
+//   //     showExpiredModal,
+//   //     accessDenied,
+//   //     redirectUrl,
+//   //     upi,
+//   //     phonePay,
+//   //     bank,
+//   //     code,
+//   //     minAmount,
+//   //     maxAmount,
+//   //     amount,
+//   //     selectMethod,
+//   //     remainingTime,
+//   //   },
+//   //   actions: {
+//   //     handleValidation,
+//   //     handlePaymentInitialization,
+//   //     setShowExpiredModal,
+//   //     setAmount,
+//   //     setSelectMethod,
+//   //     validateAmount,
+//   //   },
+//   // } = usePayment();
 
-//   useEffect(() => {
-//     // This code runs only on the client side after the component mounts
-//     setIsClient(true); // Mark as client-side
-//     if (typeof window !== "undefined") {
-//       const params = new URLSearchParams(window.location.search);
-//       setUrlAmount(params.get("amount"));
-//       setCurrentTab(params.get("tab"));
-//     }
-//   }, []);
+//   // useEffect(() => {
+//   //   // This code runs only on the client side after the component mounts
+//   //   setIsClient(true); // Mark as client-side
+//   //   if (typeof window !== "undefined") {
+//   //     const params = new URLSearchParams(window.location.search);
+//   //     setUrlAmount(params.get("amount"));
+//   //     setCurrentTab(params.get("tab"));
+//   //   }
+//   // }, []);
 
-//   const handleAmountSubmit = (e) => {
-//     e.preventDefault();
-//     const parsedAmount = Number.parseFloat(inputAmount);
-//     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-//       alert("Please enter a valid amount.");
-//       return;
-//     }
+//   // const handleAmountSubmit = (e) => {
+//   //   e.preventDefault();
+//   //   const parsedAmount = Number.parseFloat(inputAmount);
+//   //   if (isNaN(parsedAmount) || parsedAmount <= 0) {
+//   //     alert("Please enter a valid amount.");
+//   //     return;
+//   //   }
 
-//     if (!validateAmount(parsedAmount, minAmount, maxAmount)) {
-//       return;
-//     }
+//   //   if (!validateAmount(parsedAmount, minAmount, maxAmount)) {
+//   //     return;
+//   //   }
 
-//     // Store in session and redirect
-//     sessionStorage.setItem("amount", parsedAmount.toString());
-//     router.push(`/payment?amount=${parsedAmount.toFixed(2)}`);
-//   };
+//   //   // Store in session and redirect
+//   //   sessionStorage.setItem("amount", parsedAmount.toString());
+//   //   router.push(`/payment?amount=${parsedAmount.toFixed(2)}`);
+//   // };
 
-//   useEffect(() => {
-//     const navEntry = performance.getEntriesByType("navigation")[0];
-//     const isManualReload =
-//       navEntry?.type === "reload" || performance.navigation.type === 1;
+//   // useEffect(() => {
+//   //   const navEntry = performance.getEntriesByType("navigation")[0];
+//   //   const isManualReload =
+//   //     navEntry?.type === "reload" || performance.navigation.type === 1;
 
-//     if (isManualReload && order) {
-//       handleValidation(order, true);
-//       setShowExpiredModal(true);
-//       // setAccessDenied("URL has expired due to page reload.");
-//       return;
-//     }
+//   //   if (isManualReload && order) {
+//   //     handleValidation(order, true);
+//   //     setShowExpiredModal(true);
+//   //     setAccessDenied("URL has expired due to page reload.");
+//   //     return;
+//   //   }
 
-//     if (order) {
-//       sessionStorage.removeItem("upi");
-//       sessionStorage.removeItem("bank");
-//       sessionStorage.removeItem("cardpay");
-//       sessionStorage.removeItem("order");
-//       sessionStorage.removeItem("amount");
-//       setSelectMethod(false);
-//       setAmount("");
-//       handleValidation(order, false);
-//     }
-//   }, [order]);
+//   //   if (order) {
+//   //     sessionStorage.removeItem("upi");
+//   //     sessionStorage.removeItem("bank");
+//   //     sessionStorage.removeItem("cardpay");
+//   //     sessionStorage.removeItem("order");
+//   //     sessionStorage.removeItem("amount");
+//   //     setSelectMethod(false);
+//   //     setAmount("");
+//   //     handleValidation(order, false);
+//   //   }
+//   // }, [order]);
 
-//   useEffect(() => {
-//     if (!order) {
-//       handlePaymentInitialization({
-//         userId,
-//         code,
-//         ot,
-//         key,
-//         amount: amountParam,
-//         hashCode,
-//       });
-//     }
-//   }, [userId, code, ot, key, hashCode, amountParam, amount, order]);
+//   // useEffect(() => {
+//   //   if (!order) {
+//   //     handlePaymentInitialization({
+//   //       userId,
+//   //       code,
+//   //       ot,
+//   //       key,
+//   //       amount: amountParam,
+//   //       hashCode,
+//   //     });
+//   //   }
+//   // }, [userId, code, ot, key, hashCode, amountParam, amount, order]);
 
-//   const handleTabChange = (value) => {
-//     router.push(`${pathname}?tab=${value}`);
-//   };
+//   // const handleTabChange = (value) => {
+//   //   router.push(`${pathname}?tab=${value}`);
+//   // };
 
 //   if (!isClient) {
 //     return (
