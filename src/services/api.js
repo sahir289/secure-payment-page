@@ -17,7 +17,7 @@ export async function validateToken(order, isReload) {
   }
 }
 
-export default async function generatePayIn(userId, code, ot, key, hashCode, amount = null) {
+export async function generatePayIn(userId, code, ot, key, hashCode, amount = null) {
   try {
     const url = new URL(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.GENERATE_PAYIN}`);
     
