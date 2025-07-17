@@ -3,7 +3,7 @@ import { validateToken, generatePayIn } from '@/services/api';
 import { useRouter } from 'next/navigation';
 // import { toast } from '@/components/ui/toast';
 
-export function usePayment() {
+export default function usePayment() {
   const [merchantOrderId, setMerchantOrderId] = useState('');
   const [isValidated, setIsValidated] = useState(false);
   const [showExpiredModal, setShowExpiredModal] = useState(false);

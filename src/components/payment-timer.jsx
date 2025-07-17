@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Clock } from "lucide-react"
 
-export function PaymentTimer({ initialMinutes = 10 }) {
+export default function PaymentTimer({ initialMinutes = 10 }) {
   const [timeLeft, setTimeLeft] = useState(initialMinutes * 60) // Time in seconds
   const [isExpired, setIsExpired] = useState(false)
 

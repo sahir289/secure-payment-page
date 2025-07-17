@@ -1,6 +1,6 @@
 import QRCode from 'react-qr-code';
 
-const QrGenerator = ({ upi_id, ac_name, amount, size, code }) => {
+export default function QrGenerator ({ upi_id, ac_name, amount, size, code }) {
     // const payload = `upi://pay?pa=${upi_id}&am=${amount}&cu=INR`
     const payload = `upi://pay?pa=${upi_id}&pn=${ac_name}&am=${amount}&cu=INR&tn=${code}`
     return (
@@ -9,5 +9,3 @@ const QrGenerator = ({ upi_id, ac_name, amount, size, code }) => {
         </div>
     )
 }
-
-export default QrGenerator; 
