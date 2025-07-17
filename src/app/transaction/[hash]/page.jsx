@@ -77,6 +77,13 @@ export default function TransactionPage({ params }) {
   };
 
   const handleValidationResponse = (result) => {
+    if (!result) {
+      handleApiError(new Error("No response from validation API."));
+      return false;
+    }
+    if(result?.amount) {
+      setInputAmount(result.amount);
+    }
     if (result?.error) {
       handleApiError(new Error(result.error));
       // If there's a redirect URL in the error response, redirect to it
@@ -143,7 +150,7 @@ export default function TransactionPage({ params }) {
       try {
         if (!isApiCalled) {
           if (orderParam) {
-            const result = await handleValidation(orderParam, true);
+            const result = await handleValidation(orderParam, false);
             
             // Handle validation response
             if (!handleValidationResponse(result)) {
