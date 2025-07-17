@@ -9,7 +9,7 @@ import PaymentResultDialog from "./payment-result-dialog";
 import { processTransaction, imageSubmit } from "@/services/api";
 import ErrorPopup from "@/components/error-popup";
 
-export default function PaymentActions({ merchantOrderId, code, amount, remainingTime, redirectUrl }) {
+export function PaymentActions({ merchantOrderId, code, amount, remainingTime, redirectUrl }) {
   const [utr, setUtr] = useState("");
   const [utrError, setUtrError] = useState("");
   const [file, setFile] = useState(null);

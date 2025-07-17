@@ -9,7 +9,7 @@ import { PaymentTimer } from "@/components/payment-timer";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Suspense, useEffect, useState } from "react";
 
-export default function PaymentPage() {
+export function PaymentPage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams()

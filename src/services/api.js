@@ -1,6 +1,6 @@
 import { API_CONFIG } from '@/config/api.config';
 
-export default async function validateToken(order, isReload) {
+export async function validateToken(order, isReload) {
   try {
     if (!order) {
       throw new Error('Order ID is required for validation.');
@@ -53,7 +53,7 @@ export default async function generatePayIn(userId, code, ot, key, hashCode, amo
   }
 }
 
-export default async function assignBankToPayInUrl(orderId, data) {
+export async function assignBankToPayInUrl(orderId, data) {
 
   try {
     const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.ASSIGN_BANK}/${orderId}`, {
@@ -70,7 +70,7 @@ export default async function assignBankToPayInUrl(orderId, data) {
   }
 }
 
-export default async function processTransaction(merchantOrderId, data) {
+export async function processTransaction(merchantOrderId, data) {
   try {
     const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.PROCESS_TRANSACTION}/${merchantOrderId}`, {
       method: 'POST',
@@ -86,7 +86,7 @@ export default async function processTransaction(merchantOrderId, data) {
   }
 }
 
-export default async function imageSubmit(merchantOrderId, formData) {
+export async function imageSubmit(merchantOrderId, formData) {
   try {
     const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.IMAGE_SUBMIT}/${merchantOrderId}`, {
       method: 'POST',
