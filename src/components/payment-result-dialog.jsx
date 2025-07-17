@@ -22,7 +22,18 @@ export default function PaymentResultDialog({ status, message, transactionData, 
     
     switch (status) {
       case "success":
+      case "SUCCESS":
+        content = {
+          icon: <CheckCircle className="h-16 w-16 mx-auto mb-4" />,
+          title: "Payment Successful!",
+          description: message || "Your payment has been successfully processed.",
+          titleColor: "text-green-700",
+          iconColor: "text-green-500"
+        };
+        break;
+
       case "PENDING":
+      case "IMG_PENDING":
         content = {
           icon: <CheckCircle className="h-16 w-16 mx-auto mb-4" />,
           title: "Payment Confirmation Submitted!",
@@ -33,12 +44,43 @@ export default function PaymentResultDialog({ status, message, transactionData, 
         break;
 
       case "failure":
+      case "FAILED":
         content = {
           icon: <XCircle className="h-16 w-16 mx-auto mb-4" />,
-          title: "Submission Failed!",
-          description: message || "There was an issue submitting your payment details. Please check your input and try again.",
+          title: "Payment Failed!",
+          description: message || "There was an issue processing your payment. Please try again.",
           titleColor: "text-red-700",
           iconColor: "text-red-500"
+        };
+        break;
+
+      case "DROPPED":
+        content = {
+          icon: <XCircle className="h-16 w-16 mx-auto mb-4" />,
+          title: "Payment Dropped",
+          description: message || "The payment process was interrupted. Please try again.",
+          titleColor: "text-red-700",
+          iconColor: "text-red-500"
+        };
+        break;
+
+      case "BANK_MISMATCH":
+        content = {
+          icon: <AlertTriangle className="h-16 w-16 mx-auto mb-4" />,
+          title: "Bank Mismatch",
+          description: message || "The payment source bank doesn't match. Please use the correct bank account.",
+          titleColor: "text-yellow-700",
+          iconColor: "text-yellow-500"
+        };
+        break;
+
+      case "DISPUTE":
+        content = {
+          icon: <AlertTriangle className="h-16 w-16 mx-auto mb-4" />,
+          title: "Payment Disputed",
+          description: message || "This payment is under dispute. Our team will review it shortly.",
+          titleColor: "text-yellow-700",
+          iconColor: "text-yellow-500"
         };
         break;
 
@@ -66,10 +108,16 @@ export default function PaymentResultDialog({ status, message, transactionData, 
   }, [status, message]);
 
   useEffect(() => {
-    if (transactionData?.return && countdown > 0) {
+    // Handle redirect for both return and return_url
+    const redirectURL = transactionData?.return || transactionData?.return_url;
+    if (redirectURL && countdown > 0) {
       const timer = setInterval(() => {
         setCountdown((prev) => prev - 1);
       }, 1000);
+
+      if (countdown === 0) {
+        window.location.href = redirectURL;
+      }
       return () => clearInterval(timer);
     }
   }, [transactionData, countdown]);
@@ -96,14 +144,14 @@ export default function PaymentResultDialog({ status, message, transactionData, 
             <div className="text-gray-600">Order ID:</div>
             <div className="font-medium">{transactionData.merchantOrderId}</div>
             
-            <div className="text-gray-600">PayIn ID:</div>
-            <div className="font-medium">{transactionData.payinId}</div>
+           {transactionData.payinId && (<><div className="text-gray-600">PayIn ID:</div>
+            <div className="font-medium">{transactionData.payinId}</div></>)}
             
             <div className="text-gray-600">Amount:</div>
             <div className="font-medium">₹{transactionData.req_amount}</div>
             
-            <div className="text-gray-600">UTR/Transaction ID:</div>
-            <div className="font-medium">{transactionData.utr_id}</div>
+            {transactionData.utr_id && (<><div className="text-gray-600">UTR/Transaction ID:</div>
+            <div className="font-medium">{transactionData.utr_id}</div></>)}
             
             <div className="text-gray-600">Status:</div>
             <div className="font-medium text-amber-600">{transactionData.status}</div>
@@ -117,7 +165,7 @@ export default function PaymentResultDialog({ status, message, transactionData, 
         </p>
       )}
 
-      <div className="flex justify-end w-full mt-4">
+      {/* <div className="flex justify-end w-full mt-4">
         <Button 
           onClick={onReset} 
           variant="outline"
@@ -125,7 +173,7 @@ export default function PaymentResultDialog({ status, message, transactionData, 
         >
           {transactionData?.return ? 'Redirecting...' : 'Close'}
         </Button>
-      </div>
+      </div> */}
     </div>
   );
 }

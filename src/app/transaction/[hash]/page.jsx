@@ -77,12 +77,21 @@ export default function TransactionPage({ params }) {
   };
 
   const handleValidationResponse = (result) => {
-    if (result?.error) {
-      handleApiError(new Error(result.error));
-      // If there's a redirect URL in the error response, redirect to it
-      if (result.result?.redirect_url) {
+    if(result?.error.message) {
+      handleApiError(new Error(result.error.message || "Validation failed."));
+      return false;
+    }
+    if (result?.data?.amount) {
+      setInputAmount(result.data.amount);
+    }
+
+    // Check for error in the correct path
+    if (result?.data?.error) {
+      handleApiError(new Error(result.data.error));
+      // Check for redirect URL in the correct path
+      if (result?.data?.result?.redirect_url) {
         setTimeout(() => {
-          window.location.href = result.result.redirect_url;
+          window.location.href = result.data.result.redirect_url;
         }, 5000);      
       }
       return false;
@@ -143,7 +152,7 @@ export default function TransactionPage({ params }) {
       try {
         if (!isApiCalled) {
           if (orderParam) {
-            const result = await handleValidation(orderParam, true);
+            const result = await handleValidation(orderParam, false);
             
             // Handle validation response
             if (!handleValidationResponse(result)) {
