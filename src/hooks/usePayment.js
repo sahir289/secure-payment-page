@@ -102,7 +102,7 @@ export function usePayment() {
           setSelectMethod(true);
         }
       }
-      return response.data;
+      return response;
     } catch (error) {
       console.error('Validation error:', error);
       setShowExpiredModal(true);
